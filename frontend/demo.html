@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Vineyard Inn - Napa Valley | Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Hero Section */
+        .hero {
+            height: 100vh;
+            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
+                        url('https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: white;
+        }
+
+        .hero-content h1 {
+            font-size: 4rem;
+            font-weight: 300;
+            letter-spacing: 4px;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hero-content p {
+            font-size: 1.5rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 2rem;
+        }
+
+        .hero-btn {
+            padding: 15px 40px;
+            background: #722F37;
+            color: white;
+            text-decoration: none;
+            font-size: 1rem;
+            letter-spacing: 2px;
+            transition: background 0.3s;
+        }
+
+        .hero-btn:hover {
+            background: #5a252c;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 20px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            color: white;
+            letter-spacing: 3px;
+            font-weight: 300;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+            transition: opacity 0.3s;
+        }
+
+        nav a:hover {
+            opacity: 0.7;
+        }
+
+        /* Sections */
+        section {
+            padding: 100px 50px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        section h2 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            text-align: center;
+            margin-bottom: 50px;
+            color: #722F37;
+        }
+
+        /* Features Grid */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+        }
+
+        .feature {
+            text-align: center;
+            padding: 30px;
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .feature h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #722F37;
+        }
+
+        .feature p {
+            color: #666;
+        }
+
+        /* Rooms Section */
+        .rooms-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+        }
+
+        .room-card {
+            position: relative;
+            height: 400px;
+            overflow: hidden;
+        }
+
+        .room-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+
+        .room-card:hover img {
+            transform: scale(1.05);
+        }
+
+        .room-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 30px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            color: white;
+        }
+
+        .room-info h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        /* CTA Banner */
+        .cta-banner {
+            background: #722F37;
+            color: white;
+            text-align: center;
+            padding: 80px 50px;
+        }
+
+        .cta-banner h2 {
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .cta-banner p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        /* Footer */
+        footer {
+            background: #1a1a1a;
+            color: #999;
+            padding: 50px;
+            text-align: center;
+        }
+
+        footer p {
+            margin-bottom: 10px;
+        }
+
+        /* Demo Notice */
+        .demo-notice {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #722F37;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            z-index: 9999;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .demo-notice strong {
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-content h1 {
+                font-size: 2.5rem;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .rooms-grid {
+                grid-template-columns: 1fr;
+            }
+
+            nav ul {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Demo Notice Banner -->
+    <div class="demo-notice">
+        <strong>DEMO:</strong> Click the chat bubble in the bottom right to try the AI Concierge
+    </div>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">THE VINEYARD INN</div>
+        <ul>
+            <li><a href="#rooms">ROOMS</a></li>
+            <li><a href="#dining">DINING</a></li>
+            <li><a href="#experiences">EXPERIENCES</a></li>
+            <li><a href="#contact">CONTACT</a></li>
+            <li><a href="#" class="hero-btn" style="padding: 10px 20px;">BOOK NOW</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>THE VINEYARD INN</h1>
+            <p>LUXURY IN THE HEART OF NAPA VALLEY</p>
+            <a href="#rooms" class="hero-btn">EXPLORE OUR ROOMS</a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="experiences">
+        <h2>Experience Napa Valley</h2>
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">&#127863;</div>
+                <h3>Wine Tastings</h3>
+                <p>Exclusive access to over 400 world-class wineries, with private tastings arranged by our concierge.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">&#127860;</div>
+                <h3>Fine Dining</h3>
+                <p>From Michelin-starred restaurants to charming bistros, discover the best of Napa's culinary scene.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">&#128739;</div>
+                <h3>Hot Air Balloons</h3>
+                <p>Soar above the vineyards at sunrise for an unforgettable view of wine country.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Rooms Section -->
+    <section id="rooms" style="background: #f9f7f4;">
+        <h2>Our Accommodations</h2>
+        <div class="rooms-grid">
+            <div class="room-card">
+                <img src="https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80" alt="Vineyard Suite">
+                <div class="room-info">
+                    <h3>Vineyard Suite</h3>
+                    <p>King bed, vineyard views, private terrace</p>
+                </div>
+            </div>
+            <div class="room-card">
+                <img src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80" alt="Garden Room">
+                <div class="room-info">
+                    <h3>Garden Room</h3>
+                    <p>Queen bed, garden access, fireplace</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Banner -->
+    <div class="cta-banner">
+        <h2>Need Help Planning Your Trip?</h2>
+        <p>Our AI Concierge is available 24/7 to help you discover the best of Napa Valley</p>
+        <a href="#" class="hero-btn" onclick="document.getElementById('napa-concierge-toggle').click(); return false;">ASK THE CONCIERGE</a>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>The Vineyard Inn | 1234 Wine Country Lane, Napa, CA 94558</p>
+        <p>This is a demo website for the Napa Valley AI Concierge</p>
+        <p style="margin-top: 20px; color: #666;">&copy; 2025 Napa Concierge AI - Demo Only</p>
+    </footer>
+
+    <!-- Napa Concierge Widget -->
+    <link rel="stylesheet" href="widget.css">
+    <script>
+        // Configure the widget for this hotel
+        window.NAPA_CONCIERGE_API = 'http://localhost:8000';
+        window.NAPA_CONCIERGE_HOTEL = 'The Vineyard Inn';
+        window.NAPA_CONCIERGE_WELCOME = "Welcome to The Vineyard Inn! I'm your personal Napa Valley concierge. I can help you plan wine tastings, book restaurant reservations, or discover hidden gems in wine country. What would you like to explore today?";
+    </script>
+    <script src="widget.js"></script>
+</body>
+</html>
