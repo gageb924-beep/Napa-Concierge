@@ -1,31 +1,52 @@
 """
-Napa Valley AI Concierge - Backend API
-Embeddable chat widget for hotels and vacation rentals
+Napa Valley AI Concierge - Multi-tenant SaaS Backend
+Pro Package: Analytics, Lead Capture, Custom Branding
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from anthropic import Anthropic
 from dotenv import load_dotenv
+from sqlalchemy.orm import Session
+from typing import Optional
+from datetime import datetime, date
 import os
+import secrets
+
+from database import (
+    init_db, get_db, Business, Conversation, Lead, Analytics, generate_api_key
+)
 
 load_dotenv()
 
-app = FastAPI(title="Napa Valley AI Concierge")
+app = FastAPI(title="Napa Valley AI Concierge - Pro")
 
-# Allow CORS for widget embedding
+# Allow CORS for widget embedding on any domain
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict to client domains
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Initialize database on startup
+@app.on_event("startup")
+async def startup():
+    init_db()
+
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-SYSTEM_PROMPT = """You are a friendly, knowledgeable concierge for Napa Valley, California. You help hotel guests and visitors plan perfect wine country experiences.
+# Admin API key for managing businesses
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "admin_" + secrets.token_urlsafe(16))
+
+BASE_SYSTEM_PROMPT = """You are a friendly, knowledgeable concierge for Napa Valley, California. You help hotel guests and visitors plan perfect wine country experiences.
+
+## CRITICAL RULES
+1. **ONLY recommend places that are actually in Napa Valley** (Napa, Yountville, St. Helena, Calistoga, Oakville, Rutherford, American Canyon). NEVER recommend places in San Francisco, Oakland, Sacramento, or other cities.
+2. **ALWAYS include clickable links** for every place you mention using the exact formats below.
+3. **Only recommend places you have specific knowledge about** - don't make up restaurants or businesses.
 
 ## Your Personality
 - Warm and welcoming, like a knowledgeable local friend
@@ -70,21 +91,32 @@ SYSTEM_PROMPT = """You are a friendly, knowledgeable concierge for Napa Valley, 
 
 ### Dining Recommendations
 
-**Splurge-Worthy:**
+**Fine Dining:**
 - The French Laundry (Yountville) - 3 Michelin stars, book months ahead
 - Meadowood Restaurant (St. Helena) - elegant, estate setting
 - Kenzo Napa (Napa) - Japanese-California fusion
-
-**Excellent but Accessible:**
 - Bottega (Yountville) - Michael Chiarello's Italian
-- Farmstead at Long Meadow Ranch (St. Helena) - farm-to-table
 - Bouchon Bistro (Yountville) - Thomas Keller's French bistro
-- Goose & Gander (St. Helena) - great cocktails
-- Oxbow Public Market (Napa) - food hall, casual
+
+**Farm-to-Table & American:**
+- Farmstead at Long Meadow Ranch (St. Helena) - farm-to-table
+- Goose & Gander (St. Helena) - great cocktails, gastropub
+- Mustards Grill (Yountville) - Napa classic since 1983
+- Cindy's Backstreet Kitchen (St. Helena) - comfort food
+- Gott's Roadside (multiple locations) - gourmet burgers
+
+**Mexican & Latin Restaurants in Napa Valley:**
+- La Taquiza (Napa) - 2007 Redwood Rd, fresh fish tacos, casual outdoor seating, great margaritas
+- Taqueria Maria (Napa) - 1781 Old Sonoma Rd, family-run since 1998, generous portions, great salsa bar
+- Villa Corona (St. Helena) - 1138 Main St, local favorite, traditional recipes, friendly atmosphere
+- Pancha's (Yountville) - 6764 Washington St, beloved for breakfast burritos, cash only, no-frills spot
+- La Luna Market & Taqueria (Rutherford) - 1153 Rutherford Rd, taqueria inside a local market, quick and delicious
+- Azteca Market (St. Helena) - 1245 Main St, great tamales and homemade tortillas
+- C Casa (Napa, Oxbow Market) - 610 1st St, modern Mexican, craft cocktails, inside Oxbow Public Market
 
 **Casual/Quick:**
-- Gott's Roadside - gourmet burgers, multiple locations
-- Model Bakery - famous English muffins
+- Oxbow Public Market (Napa) - food hall with multiple vendors
+- Model Bakery (St. Helena & Yountville) - famous English muffins
 - Oakville Grocery - picnic supplies since 1881
 
 ### Activities Beyond Wine
@@ -111,36 +143,242 @@ SYSTEM_PROMPT = """You are a friendly, knowledgeable concierge for Napa Valley, 
 4. **Offer specific names**: Don't be vague - give actual winery/restaurant names
 5. **Mention booking requirements**: Many places need reservations
 
-When building itineraries, format them clearly with times and locations. Always ask follow-up questions to personalize recommendations."""
+When building itineraries, format them clearly with times and locations. Always ask follow-up questions to personalize recommendations.
 
+## IMPORTANT: Always Include Links
+
+EVERY place you mention MUST have a clickable link. Use these exact formats:
+
+### For places with known websites, use the website:
+- [Robert Mondavi Winery](https://www.robertmondaviwinery.com)
+- [The French Laundry](https://www.thomaskeller.com/tfl)
+- [Opus One](https://www.opusonewinery.com)
+- [Bottega](https://www.botteganapavalley.com)
+- [Mustards Grill](https://www.mustardsgrill.com)
+- [Gott's Roadside](https://www.gotts.com)
+- [Oxbow Public Market](https://www.oxbowpublicmarket.com)
+
+### For restaurants/places without a website, use Google Maps with the EXACT address:
+Format: `https://www.google.com/maps/search/FULL+ADDRESS+CITY+STATE`
+
+**Mexican Restaurant Links (use these exact links):**
+- [La Taquiza](https://www.google.com/maps/search/2007+Redwood+Rd+Napa+CA)
+- [Taqueria Maria](https://www.google.com/maps/search/1781+Old+Sonoma+Rd+Napa+CA)
+- [Villa Corona](https://www.google.com/maps/search/1138+Main+St+St+Helena+CA)
+- [Pancha's](https://www.google.com/maps/search/6764+Washington+St+Yountville+CA)
+- [La Luna Market & Taqueria](https://www.google.com/maps/search/1153+Rutherford+Rd+Rutherford+CA)
+- [Azteca Market](https://www.google.com/maps/search/1245+Main+St+St+Helena+CA)
+- [C Casa](https://www.google.com/maps/search/610+First+St+Napa+CA+Oxbow+Market)
+
+### Known Website URLs:
+**Wineries:**
+- Robert Mondavi: robertmondaviwinery.com
+- Opus One: opusonewinery.com
+- Domaine Chandon: chandon.com
+- Sterling Vineyards: sterlingvineyards.com
+- V. Sattui: vsattui.com
+- Castello di Amorosa: castellodiamorosa.com
+- HALL Wines: hallwines.com
+- Frog's Leap: frogsleap.com
+- Inglenook: inglenook.com
+- Artesa: artesawinery.com
+
+**Restaurants:**
+- The French Laundry: thomaskeller.com/tfl
+- Bouchon Bistro: thomaskeller.com/bouchonbistro
+- Bottega: botteganapavalley.com
+- Farmstead: longmeadowranch.com/eat-drink/farmstead-restaurant
+- Gott's Roadside: gotts.com
+- Mustards Grill: mustardsgrill.com
+- Oxbow Public Market: oxbowpublicmarket.com
+- Goose & Gander: goosegander.com
+
+**IMPORTANT:** If you don't have a specific address, use this format with the restaurant name AND city:
+`https://www.google.com/maps/search/Restaurant+Name+City+CA+Napa+Valley`
+
+Example: [Villa Corona](https://www.google.com/maps/search/Villa+Corona+St+Helena+CA)
+
+NEVER just link to a generic city or area - always include the business name and specific location.
+
+## Lead Capture
+
+If a guest seems very interested in booking something or wants to be contacted, politely ask if they'd like to share their email or phone number so the staff can follow up with them personally. Say something like: "Would you like me to have someone from our team reach out to help you book this? I can pass along your contact info."
+
+NEVER be pushy about this - only offer when it's genuinely helpful."""
+
+
+# ============== Pydantic Models ==============
 
 class ChatMessage(BaseModel):
     message: str
     conversation_history: list = []
-
+    session_id: Optional[str] = None
 
 class ChatResponse(BaseModel):
     response: str
     conversation_history: list
+    session_id: str
 
+class LeadCapture(BaseModel):
+    session_id: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    interest: Optional[str] = None
+    notes: Optional[str] = None
+
+class BusinessCreate(BaseModel):
+    name: str
+    business_type: str = "hotel"
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    website: Optional[str] = None
+    primary_color: str = "#722F37"
+    welcome_message: Optional[str] = None
+    widget_title: str = "Concierge"
+    widget_subtitle: str = "Your personal wine country guide"
+    custom_knowledge: Optional[str] = None
+
+class BusinessUpdate(BaseModel):
+    name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    website: Optional[str] = None
+    primary_color: Optional[str] = None
+    welcome_message: Optional[str] = None
+    widget_title: Optional[str] = None
+    widget_subtitle: Optional[str] = None
+    custom_knowledge: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+# ============== Helper Functions ==============
+
+def get_business_by_api_key(api_key: str, db: Session) -> Business:
+    """Get business by API key or raise 401"""
+    business = db.query(Business).filter(Business.api_key == api_key, Business.is_active == True).first()
+    if not business:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    return business
+
+def verify_admin_key(api_key: str):
+    """Verify admin API key"""
+    if api_key != ADMIN_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid admin API key")
+
+def build_system_prompt(business: Business) -> str:
+    """Build customized system prompt for a business"""
+    prompt = BASE_SYSTEM_PROMPT
+
+    # Add business-specific context
+    business_context = f"""
+
+## About This Business
+
+You are the AI concierge for **{business.name}**. When greeting guests or referring to the property, use this name.
+"""
+
+    if business.custom_knowledge:
+        business_context += f"""
+
+## Special Information About {business.name}
+
+{business.custom_knowledge}
+"""
+
+    return prompt + business_context
+
+def update_analytics(db: Session, business_id: int, message_text: str):
+    """Update daily analytics for a business"""
+    today = date.today()
+    analytics = db.query(Analytics).filter(
+        Analytics.business_id == business_id,
+        Analytics.date == today
+    ).first()
+
+    if not analytics:
+        analytics = Analytics(business_id=business_id, date=today, total_conversations=0, total_messages=0, unique_visitors=0, leads_captured=0)
+        db.add(analytics)
+
+    analytics.total_messages = (analytics.total_messages or 0) + 1
+    db.commit()
+
+
+# ============== Public API (Widget) ==============
 
 @app.get("/")
 async def root():
-    return {"status": "Napa Valley AI Concierge is running"}
+    return {"status": "Napa Valley AI Concierge Pro is running"}
 
+@app.get("/widget/config")
+async def get_widget_config(
+    api_key: str,
+    db: Session = Depends(get_db)
+):
+    """Get widget configuration for a business"""
+    business = get_business_by_api_key(api_key, db)
+
+    return {
+        "business_name": business.name,
+        "primary_color": business.primary_color,
+        "welcome_message": business.welcome_message or f"Welcome to {business.name}! I'm your personal Napa Valley concierge. How can I help you today?",
+        "widget_title": business.widget_title,
+        "widget_subtitle": business.widget_subtitle
+    }
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat(chat_message: ChatMessage):
+async def chat(
+    chat_message: ChatMessage,
+    request: Request,
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """Chat endpoint - requires business API key"""
+    business = get_business_by_api_key(api_key, db)
+
+    # Get or create conversation
+    session_id = chat_message.session_id or secrets.token_urlsafe(16)
+    conversation = db.query(Conversation).filter(
+        Conversation.business_id == business.id,
+        Conversation.session_id == session_id
+    ).first()
+
+    if not conversation:
+        conversation = Conversation(
+            business_id=business.id,
+            session_id=session_id,
+            visitor_ip=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent", "")[:500],
+            referrer=request.headers.get("referer", "")[:500],
+            message_count=0
+        )
+        db.add(conversation)
+
+        # Update unique visitors in analytics
+        today = date.today()
+        analytics = db.query(Analytics).filter(
+            Analytics.business_id == business.id,
+            Analytics.date == today
+        ).first()
+        if not analytics:
+            analytics = Analytics(business_id=business.id, date=today, total_conversations=0, total_messages=0, unique_visitors=0, leads_captured=0)
+            db.add(analytics)
+        analytics.total_conversations = (analytics.total_conversations or 0) + 1
+        analytics.unique_visitors = (analytics.unique_visitors or 0) + 1
+
+    conversation.message_count = (conversation.message_count or 0) + 1
+    conversation.last_message_at = datetime.utcnow()
+
     try:
         # Build messages list with history
         messages = chat_message.conversation_history.copy()
         messages.append({"role": "user", "content": chat_message.message})
 
-        # Call Claude
+        # Call Claude with business-specific prompt
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
+            system=build_system_prompt(business),
             messages=messages
         )
 
@@ -150,14 +388,239 @@ async def chat(chat_message: ChatMessage):
         updated_history = messages.copy()
         updated_history.append({"role": "assistant", "content": assistant_message})
 
+        # Store messages for analytics
+        conversation.messages = updated_history
+
+        # Update analytics
+        update_analytics(db, business.id, chat_message.message)
+
+        db.commit()
+
         return ChatResponse(
             response=assistant_message,
-            conversation_history=updated_history
+            conversation_history=updated_history,
+            session_id=session_id
         )
 
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/lead")
+async def capture_lead(
+    lead_data: LeadCapture,
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """Capture a lead from the chat widget"""
+    business = get_business_by_api_key(api_key, db)
+
+    # Find conversation
+    conversation = db.query(Conversation).filter(
+        Conversation.business_id == business.id,
+        Conversation.session_id == lead_data.session_id
+    ).first()
+
+    lead = Lead(
+        business_id=business.id,
+        conversation_id=conversation.id if conversation else None,
+        name=lead_data.name,
+        email=lead_data.email,
+        phone=lead_data.phone,
+        interest=lead_data.interest,
+        notes=lead_data.notes
+    )
+    db.add(lead)
+
+    # Update analytics
+    today = date.today()
+    analytics = db.query(Analytics).filter(
+        Analytics.business_id == business.id,
+        Analytics.date == today
+    ).first()
+    if analytics:
+        analytics.leads_captured += 1
+
+    db.commit()
+
+    return {"status": "success", "message": "Lead captured"}
+
+
+# ============== Admin API ==============
+
+@app.post("/admin/businesses")
+async def create_business(
+    business_data: BusinessCreate,
+    x_admin_key: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Create a new business (admin only)"""
+    verify_admin_key(x_admin_key)
+
+    business = Business(
+        name=business_data.name,
+        business_type=business_data.business_type,
+        contact_email=business_data.contact_email,
+        contact_phone=business_data.contact_phone,
+        website=business_data.website,
+        primary_color=business_data.primary_color,
+        welcome_message=business_data.welcome_message,
+        widget_title=business_data.widget_title,
+        widget_subtitle=business_data.widget_subtitle,
+        custom_knowledge=business_data.custom_knowledge
+    )
+    db.add(business)
+    db.commit()
+    db.refresh(business)
+
+    return {
+        "id": business.id,
+        "api_key": business.api_key,
+        "name": business.name,
+        "message": "Business created successfully. Share the API key with the client."
+    }
+
+@app.get("/admin/businesses")
+async def list_businesses(
+    x_admin_key: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """List all businesses (admin only)"""
+    verify_admin_key(x_admin_key)
+
+    businesses = db.query(Business).all()
+    return [
+        {
+            "id": b.id,
+            "api_key": b.api_key,
+            "name": b.name,
+            "business_type": b.business_type,
+            "is_active": b.is_active,
+            "created_at": b.created_at
+        }
+        for b in businesses
+    ]
+
+@app.get("/admin/businesses/{business_id}")
+async def get_business(
+    business_id: int,
+    x_admin_key: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Get business details (admin only)"""
+    verify_admin_key(x_admin_key)
+
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    return {
+        "id": business.id,
+        "api_key": business.api_key,
+        "name": business.name,
+        "business_type": business.business_type,
+        "contact_email": business.contact_email,
+        "contact_phone": business.contact_phone,
+        "website": business.website,
+        "primary_color": business.primary_color,
+        "welcome_message": business.welcome_message,
+        "widget_title": business.widget_title,
+        "widget_subtitle": business.widget_subtitle,
+        "custom_knowledge": business.custom_knowledge,
+        "is_active": business.is_active,
+        "created_at": business.created_at
+    }
+
+@app.put("/admin/businesses/{business_id}")
+async def update_business(
+    business_id: int,
+    updates: BusinessUpdate,
+    x_admin_key: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Update a business (admin only)"""
+    verify_admin_key(x_admin_key)
+
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    update_data = updates.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(business, field, value)
+
+    db.commit()
+    return {"status": "success", "message": "Business updated"}
+
+@app.get("/admin/businesses/{business_id}/analytics")
+async def get_business_analytics(
+    business_id: int,
+    days: int = 30,
+    x_admin_key: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Get analytics for a business (admin only)"""
+    verify_admin_key(x_admin_key)
+
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    from datetime import timedelta
+    start_date = date.today() - timedelta(days=days)
+
+    analytics = db.query(Analytics).filter(
+        Analytics.business_id == business_id,
+        Analytics.date >= start_date
+    ).order_by(Analytics.date.desc()).all()
+
+    # Get totals
+    total_conversations = sum(a.total_conversations for a in analytics)
+    total_messages = sum(a.total_messages for a in analytics)
+    total_leads = sum(a.leads_captured for a in analytics)
+
+    return {
+        "business_name": business.name,
+        "period_days": days,
+        "totals": {
+            "conversations": total_conversations,
+            "messages": total_messages,
+            "leads_captured": total_leads
+        },
+        "daily": [
+            {
+                "date": str(a.date),
+                "conversations": a.total_conversations,
+                "messages": a.total_messages,
+                "leads": a.leads_captured
+            }
+            for a in analytics
+        ]
+    }
+
+@app.get("/admin/businesses/{business_id}/leads")
+async def get_business_leads(
+    business_id: int,
+    x_admin_key: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Get leads for a business (admin only)"""
+    verify_admin_key(x_admin_key)
+
+    leads = db.query(Lead).filter(Lead.business_id == business_id).order_by(Lead.created_at.desc()).all()
+
+    return [
+        {
+            "id": l.id,
+            "name": l.name,
+            "email": l.email,
+            "phone": l.phone,
+            "interest": l.interest,
+            "notes": l.notes,
+            "created_at": l.created_at
+        }
+        for l in leads
+    ]
 
 @app.get("/health")
 async def health():
@@ -166,5 +629,9 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
+    print(f"\n{'='*50}")
+    print("ADMIN API KEY (save this!):")
+    print(ADMIN_API_KEY)
+    print(f"{'='*50}\n")
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
