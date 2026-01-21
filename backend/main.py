@@ -622,6 +622,148 @@ async def get_business_leads(
         for l in leads
     ]
 
+@app.post("/admin/send-weekly-reports")
+async def send_weekly_reports(
+    x_admin_key: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Send weekly reports to all businesses with contact emails (admin only)"""
+    verify_admin_key(x_admin_key)
+
+    resend_api_key = os.getenv("RESEND_API_KEY")
+    if not resend_api_key:
+        raise HTTPException(status_code=400, detail="RESEND_API_KEY not configured")
+
+    import resend
+    resend.api_key = resend_api_key
+
+    from datetime import timedelta
+    start_date = date.today() - timedelta(days=7)
+
+    businesses = db.query(Business).filter(Business.is_active == True).all()
+    sent_count = 0
+    errors = []
+
+    for business in businesses:
+        if not business.contact_email:
+            continue
+
+        # Get analytics for this business
+        analytics = db.query(Analytics).filter(
+            Analytics.business_id == business.id,
+            Analytics.date >= start_date
+        ).all()
+
+        total_conversations = sum(a.total_conversations for a in analytics)
+        total_messages = sum(a.total_messages for a in analytics)
+        total_leads = sum(a.leads_captured for a in analytics)
+
+        # Get new leads this week
+        new_leads = db.query(Lead).filter(
+            Lead.business_id == business.id,
+            Lead.created_at >= datetime.combine(start_date, datetime.min.time())
+        ).all()
+
+        # Build email HTML
+        leads_html = ""
+        if new_leads:
+            leads_html = "<h3>New Leads This Week:</h3><ul>"
+            for lead in new_leads:
+                leads_html += f"<li><strong>{lead.name or 'Unknown'}</strong> - {lead.email or ''} {lead.phone or ''}</li>"
+            leads_html += "</ul>"
+
+        html_content = f"""
+        <html>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 600px;">
+            <h2 style="color: #722F37;">Weekly Concierge Report</h2>
+            <p>Hi! Here's your weekly summary for <strong>{business.name}</strong>:</p>
+
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">This Week's Stats</h3>
+                <p><strong>Conversations:</strong> {total_conversations}</p>
+                <p><strong>Messages:</strong> {total_messages}</p>
+                <p><strong>Leads Captured:</strong> {total_leads}</p>
+            </div>
+
+            {leads_html}
+
+            <p style="color: #666; font-size: 14px; margin-top: 30px;">
+                Your 24/7 concierge is working hard for you!<br>
+                - Napa Concierge
+            </p>
+        </body>
+        </html>
+        """
+
+        try:
+            resend.Emails.send({
+                "from": "Napa Concierge <reports@napa-concierge.com>",
+                "to": [business.contact_email],
+                "subject": f"Weekly Report: {total_conversations} conversations, {total_leads} new leads",
+                "html": html_content
+            })
+            sent_count += 1
+        except Exception as e:
+            errors.append({"business": business.name, "error": str(e)})
+
+    return {
+        "status": "success",
+        "reports_sent": sent_count,
+        "errors": errors
+    }
+
+
+@app.get("/admin/businesses/{business_id}/weekly-report")
+async def get_weekly_report(
+    business_id: int,
+    x_admin_key: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Get weekly report data for a business (admin only)"""
+    verify_admin_key(x_admin_key)
+
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    from datetime import timedelta
+    start_date = date.today() - timedelta(days=7)
+
+    analytics = db.query(Analytics).filter(
+        Analytics.business_id == business_id,
+        Analytics.date >= start_date
+    ).all()
+
+    total_conversations = sum(a.total_conversations for a in analytics)
+    total_messages = sum(a.total_messages for a in analytics)
+    total_leads = sum(a.leads_captured for a in analytics)
+
+    new_leads = db.query(Lead).filter(
+        Lead.business_id == business_id,
+        Lead.created_at >= datetime.combine(start_date, datetime.min.time())
+    ).all()
+
+    return {
+        "business_name": business.name,
+        "period": "Last 7 days",
+        "stats": {
+            "conversations": total_conversations,
+            "messages": total_messages,
+            "leads_captured": total_leads
+        },
+        "new_leads": [
+            {
+                "name": l.name,
+                "email": l.email,
+                "phone": l.phone,
+                "interest": l.interest,
+                "created_at": l.created_at
+            }
+            for l in new_leads
+        ]
+    }
+
+
 @app.get("/health")
 async def health():
     return {"status": "healthy"}

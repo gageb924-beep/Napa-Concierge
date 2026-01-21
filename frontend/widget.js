@@ -31,6 +31,7 @@
     let sessionId = null;
     let isLoading = false;
     let configLoaded = false;
+    let proactiveShown = false;
 
     // Generate or retrieve session ID
     function getSessionId() {
@@ -93,6 +94,11 @@
         const container = document.createElement('div');
         container.id = 'napa-concierge-widget';
         container.innerHTML = `
+            <div id="napa-concierge-proactive" style="display: none;">
+                <span id="napa-concierge-proactive-close">&times;</span>
+                <p>Planning a visit? I can help with reservations and recommendations!</p>
+            </div>
+
             <button id="napa-concierge-toggle" aria-label="Open chat">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.07L2 22l4.93-1.36C8.42 21.5 10.15 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm2.07-7.75l-.9.92C11.45 10.9 11 11.5 11 13h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H6c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
@@ -393,6 +399,51 @@
             #nc-lead-submit { background: var(--nc-primary); color: white; }
             #nc-lead-cancel { background: #eee; color: #666; }
 
+            /* Proactive popup */
+            #napa-concierge-proactive {
+                position: fixed;
+                bottom: 94px;
+                right: 24px;
+                background: var(--nc-white);
+                padding: 16px 20px;
+                border-radius: 12px;
+                box-shadow: var(--nc-shadow);
+                max-width: 260px;
+                z-index: 9997;
+                animation: ncFadeIn 0.4s ease;
+            }
+            #napa-concierge-proactive p {
+                margin: 0;
+                font-size: 14px;
+                color: var(--nc-text);
+                line-height: 1.5;
+            }
+            #napa-concierge-proactive-close {
+                position: absolute;
+                top: 8px;
+                right: 12px;
+                font-size: 18px;
+                color: #999;
+                cursor: pointer;
+                line-height: 1;
+            }
+            #napa-concierge-proactive-close:hover { color: #666; }
+            #napa-concierge-proactive::after {
+                content: '';
+                position: absolute;
+                bottom: -8px;
+                right: 28px;
+                width: 0;
+                height: 0;
+                border-left: 8px solid transparent;
+                border-right: 8px solid transparent;
+                border-top: 8px solid var(--nc-white);
+            }
+            @keyframes ncFadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
             @media (max-width: 480px) {
                 #napa-concierge-chat {
                     bottom: 0;
@@ -404,6 +455,7 @@
                     border-radius: 0;
                 }
                 #napa-concierge-toggle { bottom: 16px; right: 16px; }
+                #napa-concierge-proactive { right: 16px; bottom: 86px; }
             }
         `;
         document.head.appendChild(style);
@@ -572,6 +624,10 @@
             chat.classList.add('open');
             toggle.style.display = 'none';
 
+            // Hide proactive popup if visible
+            const proactive = document.getElementById('napa-concierge-proactive');
+            if (proactive) proactive.style.display = 'none';
+
             if (conversationHistory.length === 0) {
                 addMessage(CONFIG.welcomeMessage, 'assistant');
             }
@@ -600,6 +656,29 @@
         // Lead form handlers
         document.getElementById('nc-lead-submit').addEventListener('click', submitLead);
         document.getElementById('nc-lead-cancel').addEventListener('click', hideLeadForm);
+
+        // Proactive popup - show after 10 seconds if chat not opened
+        const proactive = document.getElementById('napa-concierge-proactive');
+        const proactiveClose = document.getElementById('napa-concierge-proactive-close');
+
+        setTimeout(function() {
+            if (!proactiveShown && !chat.classList.contains('open')) {
+                proactive.style.display = 'block';
+                proactiveShown = true;
+            }
+        }, 10000);
+
+        // Close proactive popup
+        proactiveClose.addEventListener('click', function(e) {
+            e.stopPropagation();
+            proactive.style.display = 'none';
+        });
+
+        // Click proactive popup to open chat
+        proactive.addEventListener('click', function() {
+            proactive.style.display = 'none';
+            toggle.click();
+        });
     }
 
     // Start when DOM is ready
