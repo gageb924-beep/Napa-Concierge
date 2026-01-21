@@ -697,7 +697,7 @@ async def send_weekly_reports(
 
         try:
             resend.Emails.send({
-                "from": "Napa Concierge <reports@napa-concierge.com>",
+                "from": "Napa Concierge <onboarding@resend.dev>",
                 "to": [business.contact_email],
                 "subject": f"Weekly Report: {total_conversations} conversations, {total_leads} new leads",
                 "html": html_content
