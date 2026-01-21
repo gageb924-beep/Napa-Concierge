@@ -1,0 +1,11 @@
+{
+  "name": "napa-concierge-frontend",
+  "version": "1.0.0",
+  "description": "Napa Valley AI Concierge Widget",
+  "scripts": {
+    "start": "serve -s . -l $PORT"
+  },
+  "dependencies": {
+    "serve": "^14.2.0"
+  }
+}
