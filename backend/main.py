@@ -15,7 +15,7 @@ import os
 import secrets
 
 from database import (
-    init_db, get_db, Business, Conversation, Lead, Analytics, generate_api_key
+    init_db, get_db, Business, Conversation, Lead, Analytics, ContractSignature, generate_api_key
 )
 
 load_dotenv()
@@ -250,6 +250,12 @@ class BusinessUpdate(BaseModel):
     widget_subtitle: Optional[str] = None
     custom_knowledge: Optional[str] = None
     is_active: Optional[bool] = None
+
+class ContractSign(BaseModel):
+    signer_name: str
+    signer_email: str
+    company_name: str
+    company_type: Optional[str] = None
 
 
 # ============== Helper Functions ==============
@@ -767,6 +773,59 @@ async def get_weekly_report(
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+
+# ============== Contract Signing ==============
+
+@app.post("/contract/sign")
+async def sign_contract(
+    contract_data: ContractSign,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Sign the service agreement"""
+    signature = ContractSignature(
+        signer_name=contract_data.signer_name,
+        signer_email=contract_data.signer_email,
+        company_name=contract_data.company_name,
+        company_type=contract_data.company_type,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent", "")[:500]
+    )
+    db.add(signature)
+    db.commit()
+    db.refresh(signature)
+
+    return {
+        "status": "success",
+        "message": "Contract signed successfully",
+        "signature_id": signature.id,
+        "signed_at": signature.signed_at
+    }
+
+
+@app.get("/admin/contracts")
+async def list_contracts(
+    x_admin_key: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """List all signed contracts (admin only)"""
+    verify_admin_key(x_admin_key)
+
+    signatures = db.query(ContractSignature).order_by(ContractSignature.signed_at.desc()).all()
+    return [
+        {
+            "id": s.id,
+            "signer_name": s.signer_name,
+            "signer_email": s.signer_email,
+            "company_name": s.company_name,
+            "company_type": s.company_type,
+            "contract_version": s.contract_version,
+            "signed_at": s.signed_at,
+            "ip_address": s.ip_address
+        }
+        for s in signatures
+    ]
 
 
 if __name__ == "__main__":

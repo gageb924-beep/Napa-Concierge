@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Agreement - Napa Concierge</title>
+    <meta name="description" content="Napa Concierge Service Agreement for business clients.">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #333;
+            line-height: 1.7;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 20px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background: white;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #722F37;
+            text-decoration: none;
+        }
+
+        nav a.nav-link {
+            background: #722F37;
+            color: white;
+            padding: 12px 28px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        nav a.nav-link:hover {
+            background: #5a252c;
+        }
+
+        /* Header */
+        .header {
+            padding: 140px 50px 60px;
+            background: linear-gradient(135deg, #faf9f7 0%, #f5f0eb 100%);
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Contract Content */
+        .contract-section {
+            padding: 60px 50px;
+            background: white;
+        }
+
+        .contract-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .contract-box {
+            background: #faf9f7;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 40px;
+            max-height: 500px;
+            overflow-y: auto;
+            margin-bottom: 40px;
+        }
+
+        .contract-box h2 {
+            font-size: 1.5rem;
+            color: #1a1a1a;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #722F37;
+        }
+
+        .contract-box h3 {
+            font-size: 1.1rem;
+            color: #1a1a1a;
+            margin: 24px 0 12px;
+        }
+
+        .contract-box p {
+            margin-bottom: 16px;
+            color: #444;
+        }
+
+        .contract-box ul {
+            margin: 12px 0 16px 24px;
+            color: #444;
+        }
+
+        .contract-box li {
+            margin-bottom: 8px;
+        }
+
+        .effective-date {
+            background: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-weight: 500;
+        }
+
+        /* Sign Form */
+        .sign-section {
+            padding: 60px 50px;
+            background: #faf9f7;
+        }
+
+        .sign-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .sign-container h2 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+            color: #1a1a1a;
+        }
+
+        .sign-container > p {
+            text-align: center;
+            color: #666;
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #722F37;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin: 24px 0;
+            padding: 16px;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-top: 2px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            font-size: 0.95rem;
+            color: #444;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #722F37;
+            color: white;
+            padding: 16px 36px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background: #5a252c;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Success State */
+        .success-message {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .success-message .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .success-message h3 {
+            color: #28a745;
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+        }
+
+        .success-message p {
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Footer */
+        footer {
+            background: #1a1a1a;
+            color: #888;
+            padding: 40px 50px;
+            text-align: center;
+        }
+
+        footer p {
+            margin-bottom: 8px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                padding: 16px 24px;
+            }
+
+            .header {
+                padding: 140px 24px 60px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .contract-section,
+            .sign-section {
+                padding: 40px 24px;
+            }
+
+            .contract-box {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <a href="sell.html" class="logo">Napa Concierge</a>
+        <a href="sell.html#contact" class="nav-link">Get Started</a>
+    </nav>
+
+    <!-- Header -->
+    <section class="header">
+        <h1>Service Agreement</h1>
+        <p>Please review our service agreement below and provide your signature to proceed.</p>
+    </section>
+
+    <!-- Contract Content -->
+    <section class="contract-section">
+        <div class="contract-container">
+            <div class="contract-box">
+                <div class="effective-date">
+                    <strong>Agreement Version:</strong> 1.0 | <strong>Effective Date:</strong> January 2025
+                </div>
+
+                <h2>Napa Concierge Service Agreement</h2>
+
+                <p>This Service Agreement ("Agreement") is entered into between Napa Concierge ("Provider") and the undersigned business entity ("Client").</p>
+
+                <h3>1. Services Provided</h3>
+                <p>Provider agrees to deliver the following services to Client:</p>
+                <ul>
+                    <li>24/7 AI-powered concierge chat widget for Client's website</li>
+                    <li>Lead capture and notification system</li>
+                    <li>Analytics dashboard with conversation metrics</li>
+                    <li>Custom branding and configuration</li>
+                    <li>Weekly performance reports via email</li>
+                    <li>Initial setup and installation assistance</li>
+                </ul>
+
+                <h3>2. Pricing and Payment</h3>
+                <p>Client agrees to pay the monthly subscription fee as outlined in the pricing plan selected at signup. Current founding member rate is $350/month.</p>
+                <ul>
+                    <li>Payment is due on the same day each month as the initial signup</li>
+                    <li>A 14-day free trial is provided for new clients</li>
+                    <li>Prices are locked in for the duration of continuous service</li>
+                    <li>Late payments may result in service suspension after 15 days</li>
+                </ul>
+
+                <h3>3. Service Level</h3>
+                <p>Provider commits to:</p>
+                <ul>
+                    <li>99.5% uptime for the chat widget service</li>
+                    <li>Response to support inquiries within 24 business hours</li>
+                    <li>Regular updates and improvements to the AI system</li>
+                </ul>
+
+                <h3>4. Client Responsibilities</h3>
+                <p>Client agrees to:</p>
+                <ul>
+                    <li>Provide accurate business information for AI customization</li>
+                    <li>Maintain a valid payment method on file</li>
+                    <li>Use the service in compliance with all applicable laws</li>
+                    <li>Not use the service for any unlawful or fraudulent purposes</li>
+                </ul>
+
+                <h3>5. Data and Privacy</h3>
+                <ul>
+                    <li>Provider will handle all guest conversation data in accordance with privacy best practices</li>
+                    <li>Lead information captured belongs to Client and will be provided upon request</li>
+                    <li>Provider may use anonymized, aggregated data for service improvements</li>
+                    <li>Client data will not be sold or shared with third parties for marketing purposes</li>
+                </ul>
+
+                <h3>6. Limitation of Liability</h3>
+                <p>Provider's liability is limited to the amount paid by Client in the three months preceding any claim. Provider is not liable for:</p>
+                <ul>
+                    <li>Actions taken by guests based on AI recommendations</li>
+                    <li>Third-party services recommended by the AI (restaurants, tours, etc.)</li>
+                    <li>Loss of business due to service interruptions</li>
+                    <li>Indirect, incidental, or consequential damages</li>
+                </ul>
+
+                <h3>7. Indemnification</h3>
+                <p>Client agrees to indemnify and hold harmless Provider from any claims arising from Client's use of the service or Client's business operations.</p>
+
+                <h3>8. Cancellation</h3>
+                <ul>
+                    <li>Either party may cancel with 30 days written notice</li>
+                    <li>Client may cancel during the free trial at no charge</li>
+                    <li>No refunds for partial months after cancellation</li>
+                    <li>Client data will be available for export for 30 days after cancellation</li>
+                </ul>
+
+                <h3>9. Modifications</h3>
+                <p>Provider may modify these terms with 30 days notice. Continued use of the service after modifications constitutes acceptance of the new terms.</p>
+
+                <h3>10. Governing Law</h3>
+                <p>This Agreement shall be governed by the laws of the State of California. Any disputes shall be resolved in the courts of Napa County, California.</p>
+
+                <h3>11. Entire Agreement</h3>
+                <p>This Agreement constitutes the entire agreement between the parties and supersedes all prior agreements, representations, and understandings.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sign Form -->
+    <section class="sign-section">
+        <div class="sign-container">
+            <div id="signForm">
+                <h2>Sign Agreement</h2>
+                <p>By signing below, you agree to the terms outlined in this Service Agreement.</p>
+
+                <form id="contractForm">
+                    <div class="form-group">
+                        <label>Your Full Name *</label>
+                        <input type="text" name="signer_name" required placeholder="John Smith">
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address *</label>
+                        <input type="email" name="signer_email" required placeholder="john@yourcompany.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Company Name *</label>
+                        <input type="text" name="company_name" required placeholder="Oakville Wine Estate">
+                    </div>
+                    <div class="form-group">
+                        <label>Business Type</label>
+                        <select name="company_type">
+                            <option value="">Select...</option>
+                            <option value="winery">Winery / Vineyard</option>
+                            <option value="hotel">Hotel / Inn</option>
+                            <option value="restaurant">Restaurant</option>
+                            <option value="tour">Tour Operator</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="acceptTerms" required>
+                        <label for="acceptTerms">
+                            I have read and agree to the Service Agreement above. I understand that this constitutes a legally binding agreement between my company and Napa Concierge.
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="submitBtn">Sign Agreement</button>
+                </form>
+            </div>
+
+            <div id="successMessage" class="success-message">
+                <div class="icon">&#10003;</div>
+                <h3>Agreement Signed Successfully</h3>
+                <p>Thank you for signing the Service Agreement.</p>
+                <p>A confirmation has been recorded with your details.</p>
+                <p style="margin-top: 24px;">
+                    <a href="sell.html#contact" class="btn-primary" style="display: inline-block; width: auto;">Continue to Sign Up</a>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>Napa Concierge</p>
+        <p>&copy; 2025 All rights reserved.</p>
+    </footer>
+
+    <script>
+        const API_URL = 'https://napa-concierge.onrender.com';
+
+        document.getElementById('contractForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Signing...';
+
+            const formData = new FormData(this);
+            const data = {
+                signer_name: formData.get('signer_name'),
+                signer_email: formData.get('signer_email'),
+                company_name: formData.get('company_name'),
+                company_type: formData.get('company_type') || null
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/contract/sign`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    document.getElementById('signForm').classList.add('hidden');
+                    document.getElementById('successMessage').classList.add('show');
+                } else {
+                    throw new Error('Failed to sign contract');
+                }
+            } catch (error) {
+                alert('There was an error signing the agreement. Please try again or contact us directly.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign Agreement';
+            }
+        });
+    </script>
+</body>
+</html>

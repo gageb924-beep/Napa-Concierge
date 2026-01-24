@@ -121,6 +121,27 @@ class Analytics(Base):
     top_topics = Column(JSON, default=list)
 
 
+class ContractSignature(Base):
+    """Signed service agreements from clients"""
+    __tablename__ = "contract_signatures"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Signer info
+    signer_name = Column(String(255), nullable=False)
+    signer_email = Column(String(255), nullable=False)
+    company_name = Column(String(255), nullable=False)
+    company_type = Column(String(50))  # winery, hotel, restaurant, tour, other
+
+    # Contract details
+    contract_version = Column(String(20), default="1.0")
+
+    # Audit trail
+    signed_at = Column(DateTime, default=datetime.utcnow)
+    ip_address = Column(String(45))
+    user_agent = Column(String(500))
+
+
 def init_db():
     """Create all tables"""
     Base.metadata.create_all(bind=engine)
