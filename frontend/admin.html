@@ -378,6 +378,66 @@
             color: #721c24;
         }
 
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toggle-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #28a745;
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        .toggle-switch input:disabled + .toggle-slider {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         .hidden {
             display: none !important;
         }
@@ -540,7 +600,16 @@
             <div id="page-business-detail" class="page hidden">
                 <div class="page-header">
                     <h1 id="businessDetailName">Business Name</h1>
-                    <button class="btn btn-secondary" onclick="showPage('businesses')">Back to List</button>
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <div class="toggle-container">
+                            <span class="toggle-label">Active</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="activeToggle" onchange="toggleBusinessActive()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <button class="btn btn-secondary" onclick="showPage('businesses')">Back to List</button>
+                    </div>
                 </div>
 
                 <div class="stats-grid" id="businessStats">
@@ -709,6 +778,7 @@
             .then(business => {
                 currentBusiness = business;
                 document.getElementById('businessDetailName').textContent = business.name;
+                document.getElementById('activeToggle').checked = business.is_active;
                 document.getElementById('businessApiKey').textContent = business.api_key;
 
                 const embedCode = `<script src="${WIDGET_URL}" data-api-key="${business.api_key}" data-api-url="${API_URL}"><\/script>`;
@@ -800,6 +870,37 @@
         function copyApiKey() {
             navigator.clipboard.writeText(document.getElementById('businessApiKey').textContent);
             alert('API key copied!');
+        }
+
+        function toggleBusinessActive() {
+            if (!currentBusiness) return;
+
+            const toggle = document.getElementById('activeToggle');
+            const newStatus = toggle.checked;
+            toggle.disabled = true;
+
+            fetch(`${API_URL}/admin/businesses/${currentBusiness.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-admin-key': adminKey
+                },
+                body: JSON.stringify({ is_active: newStatus })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to update');
+                return res.json();
+            })
+            .then(() => {
+                currentBusiness.is_active = newStatus;
+                toggle.disabled = false;
+                alert(newStatus ? 'Business activated! Widget is now live.' : 'Business deactivated. Widget will stop working.');
+            })
+            .catch(err => {
+                toggle.checked = !newStatus; // Revert on error
+                toggle.disabled = false;
+                alert('Failed to update status. Please try again.');
+            });
         }
 
         // Allow Enter key to login
