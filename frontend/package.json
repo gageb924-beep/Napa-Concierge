@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "Napa Valley AI Concierge Widget",
   "scripts": {
-    "start": "serve -s . -l $PORT"
+    "start": "serve -s . -l ${PORT:-3000}",
+    "build": "echo 'No build needed'"
   },
   "dependencies": {
     "serve": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

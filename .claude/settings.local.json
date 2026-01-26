@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(railway --version:*)",
+      "Bash(railway status:*)",
+      "Bash(railway service:*)",
+      "Bash(railway up:*)",
+      "Bash(railway logs:*)",
+      "Bash(railway whoami:*)",
+      "Bash(start \"\" \"https://railway.com/account/plans\")",
+      "Bash(railway domain:*)",
+      "Bash(curl:*)",
+      "Bash(railway link:*)",
+      "Bash(start \"\" \"https://railway.com/project/47b67d60-ee37-4e2c-a5e1-5126927b3dc7\")",
+      "Bash(railway unlink:*)",
+      "Bash(start \"\" \"https://railway.com/project/47b67d60-ee37-4e2c-a5e1-5126927b3dc7/service/new\")",
+      "Bash(railway add:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(start \"\" \"https://napa-frontend-production.up.railway.app\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nUpdate frontend with production API key\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(start \"\" \"https://napa-frontend-production.up.railway.app/admin.html\")",
+      "Bash(start \"\" \"https://console.anthropic.com/settings/billing\")",
+      "Bash(start \"\" \"https://railway.com/account/billing\")",
+      "Bash(git commit:*)",
+      "Bash(start \"\" \"https://resend.com/domains\")",
+      "WebSearch",
+      "WebFetch(domain:www.hotelyountville.com)",
+      "WebFetch(domain:northblockyountville.com)",
+      "WebFetch(domain:www.theinkhouse.com)",
+      "WebFetch(domain:www.nicheliniwinery.com)",
+      "WebFetch(domain:www.baldacci.com)",
+      "WebFetch(domain:www.trefethen.com)",
+      "Bash(cd:*)",
+      "WebFetch(domain:napa-frontend-production.up.railway.app)",
+      "WebFetch(domain:app.instantly.ai)",
+      "Bash(railway variables:*)"
+    ]
+  }
+}
