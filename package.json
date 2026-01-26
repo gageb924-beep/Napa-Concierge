@@ -1,0 +1,7 @@
+{
+  "name": "napa-concierge",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "cd frontend && npm install && npm start"
+  }
+}
