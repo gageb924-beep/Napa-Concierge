@@ -565,6 +565,14 @@
             background: #138496;
         }
 
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
         .report-options {
             display: flex;
             gap: 15px;
@@ -730,7 +738,7 @@
             <div id="page-business-detail" class="page hidden">
                 <div class="page-header">
                     <h1 id="businessDetailName">Business Name</h1>
-                    <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
                         <div class="toggle-container">
                             <span class="toggle-label">Active</span>
                             <label class="toggle-switch">
@@ -738,8 +746,10 @@
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
+                        <button class="btn btn-small" onclick="openEditModal()">Edit</button>
                         <button class="btn btn-report btn-small" onclick="openSendReportModal()">Send Report</button>
-                        <button class="btn btn-secondary btn-small" onclick="showPage('businesses')">Back to List</button>
+                        <button class="btn btn-danger btn-small" onclick="deleteBusiness()">Delete</button>
+                        <button class="btn btn-secondary btn-small" onclick="showPage('businesses')">Back</button>
                     </div>
                 </div>
 
@@ -880,6 +890,60 @@
                 <button class="btn btn-secondary" style="flex: 1;" onclick="closeSendReportModal()">Cancel</button>
                 <button class="btn btn-success" style="flex: 1;" id="sendReportBtn" onclick="sendReport()">Send Report</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Edit Business Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>Edit Business</h3>
+                <button class="close-btn" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form id="editBusinessForm" onsubmit="saveBusinessEdits(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Business Name</label>
+                        <input type="text" id="editName" placeholder="Business name">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Email</label>
+                        <input type="email" id="editEmail" placeholder="email@example.com">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Widget Title</label>
+                        <input type="text" id="editWidgetTitle" placeholder="Concierge">
+                    </div>
+                    <div class="form-group">
+                        <label>Brand Color</label>
+                        <input type="color" id="editColor" value="#722F37">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Widget Subtitle</label>
+                    <input type="text" id="editWidgetSubtitle" placeholder="Your personal guide">
+                </div>
+
+                <div class="form-group">
+                    <label>Welcome Message</label>
+                    <textarea id="editWelcomeMessage" placeholder="Welcome! How can I help you today?"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Custom Knowledge (What the AI knows about this business)</label>
+                    <textarea id="editCustomKnowledge" style="min-height: 200px;" placeholder="Add information about this business that the AI should know:&#10;&#10;- Hours of operation&#10;- Services offered&#10;- Pricing&#10;- Special features&#10;- Policies&#10;- Anything else the bot should know to answer questions..."></textarea>
+                    <p style="font-size: 12px; color: #888; margin-top: 5px;">This information is added to the AI's knowledge. Be specific and detailed.</p>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success" style="flex: 1;" id="saveEditBtn">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -1338,6 +1402,104 @@
             .finally(() => {
                 btn.disabled = false;
                 btn.textContent = 'Send Report';
+            });
+        }
+
+        // Edit Business functions
+        function openEditModal() {
+            if (!currentBusiness) return;
+
+            // Populate form with current values
+            document.getElementById('editName').value = currentBusiness.name || '';
+            document.getElementById('editEmail').value = currentBusiness.contact_email || '';
+            document.getElementById('editWidgetTitle').value = currentBusiness.widget_title || '';
+            document.getElementById('editWidgetSubtitle').value = currentBusiness.widget_subtitle || '';
+            document.getElementById('editColor').value = currentBusiness.primary_color || '#722F37';
+            document.getElementById('editWelcomeMessage').value = currentBusiness.welcome_message || '';
+            document.getElementById('editCustomKnowledge').value = currentBusiness.custom_knowledge || '';
+
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        function saveBusinessEdits(e) {
+            e.preventDefault();
+            if (!currentBusiness) return;
+
+            const btn = document.getElementById('saveEditBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            const updates = {
+                name: document.getElementById('editName').value,
+                contact_email: document.getElementById('editEmail').value || null,
+                widget_title: document.getElementById('editWidgetTitle').value,
+                widget_subtitle: document.getElementById('editWidgetSubtitle').value,
+                primary_color: document.getElementById('editColor').value,
+                welcome_message: document.getElementById('editWelcomeMessage').value || null,
+                custom_knowledge: document.getElementById('editCustomKnowledge').value || null
+            };
+
+            fetch(`${API_URL}/admin/businesses/${currentBusiness.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-admin-key': adminKey
+                },
+                body: JSON.stringify(updates)
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to update');
+                return res.json();
+            })
+            .then(data => {
+                // Update currentBusiness with new values
+                Object.assign(currentBusiness, updates);
+                document.getElementById('businessDetailName').textContent = updates.name;
+                alert('Business updated successfully!');
+                closeEditModal();
+            })
+            .catch(err => {
+                alert('Failed to update business. Please try again.');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = 'Save Changes';
+            });
+        }
+
+        // Delete Business function
+        function deleteBusiness() {
+            if (!currentBusiness) return;
+
+            const confirmDelete = confirm(`Are you sure you want to delete "${currentBusiness.name}"?\n\nThis will permanently delete:\n- All conversations\n- All leads\n- All analytics data\n\nThis cannot be undone!`);
+
+            if (!confirmDelete) return;
+
+            const doubleConfirm = confirm(`FINAL WARNING: Delete "${currentBusiness.name}" and ALL its data?`);
+
+            if (!doubleConfirm) return;
+
+            fetch(`${API_URL}/admin/businesses/${currentBusiness.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'x-admin-key': adminKey
+                }
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to delete');
+                return res.json();
+            })
+            .then(data => {
+                alert('Business deleted successfully.');
+                currentBusiness = null;
+                showPage('businesses');
+            })
+            .catch(err => {
+                alert('Failed to delete business. Please try again.');
             });
         }
     </script>

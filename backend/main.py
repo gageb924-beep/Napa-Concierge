@@ -558,6 +558,31 @@ async def update_business(
     db.commit()
     return {"status": "success", "message": "Business updated"}
 
+
+@app.delete("/admin/businesses/{business_id}")
+async def delete_business(
+    business_id: int,
+    x_admin_key: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Delete a business and all its data (admin only)"""
+    verify_admin_key(x_admin_key)
+
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    # Delete related data first
+    db.query(Analytics).filter(Analytics.business_id == business_id).delete()
+    db.query(Lead).filter(Lead.business_id == business_id).delete()
+    db.query(Conversation).filter(Conversation.business_id == business_id).delete()
+
+    # Delete the business
+    db.delete(business)
+    db.commit()
+
+    return {"status": "success", "message": f"Business '{business.name}' deleted"}
+
 @app.get("/admin/businesses/{business_id}/analytics")
 async def get_business_analytics(
     business_id: int,
