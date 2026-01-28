@@ -53,11 +53,22 @@
                 CONFIG.widgetSubtitle = config.widget_subtitle || CONFIG.widgetSubtitle;
                 CONFIG.welcomeMessage = config.welcome_message || CONFIG.welcomeMessage;
                 configLoaded = true;
-                applyBranding();
             }
         } catch (error) {
             console.warn('Napa Concierge: Could not load config, using defaults');
         }
+
+        // Apply local config overrides (useful for demos)
+        if (window.NAPA_CONCIERGE_CONFIG) {
+            const localConfig = window.NAPA_CONCIERGE_CONFIG;
+            if (localConfig.primaryColor) CONFIG.primaryColor = localConfig.primaryColor;
+            if (localConfig.businessName) CONFIG.businessName = localConfig.businessName;
+            if (localConfig.widgetTitle) CONFIG.widgetTitle = localConfig.widgetTitle;
+            if (localConfig.widgetSubtitle) CONFIG.widgetSubtitle = localConfig.widgetSubtitle;
+            if (localConfig.welcomeMessage) CONFIG.welcomeMessage = localConfig.welcomeMessage;
+        }
+
+        applyBranding();
     }
 
     // Apply custom branding colors
