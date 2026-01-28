@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meritage Resort & Spa - AI Concierge Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .demo-header {
+            background: rgba(255,255,255,0.95);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+
+        .demo-header h1 {
+            font-size: 24px;
+            color: #722F37;
+        }
+
+        .demo-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .demo-badge {
+            background: #722F37;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .demo-container {
+            max-width: 1400px;
+            margin: 40px auto;
+            padding: 0 40px;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 40px;
+        }
+
+        .examples-section {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .examples-section h2 {
+            color: #722F37;
+            margin-bottom: 10px;
+            font-size: 22px;
+        }
+
+        .examples-section > p {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+
+        .example-card {
+            background: #f9f9f9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .example-card:hover {
+            border-color: #722F37;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(114, 47, 55, 0.15);
+        }
+
+        .example-card.active {
+            border-color: #722F37;
+            background: #fdf8f8;
+        }
+
+        .example-question {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .example-question::before {
+            content: "Q";
+            background: #722F37;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .example-answer {
+            color: #555;
+            font-size: 14px;
+            line-height: 1.6;
+            padding-left: 32px;
+        }
+
+        .widget-section {
+            position: sticky;
+            top: 40px;
+        }
+
+        .widget-container {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .widget-header {
+            background: linear-gradient(135deg, #722F37 0%, #4a1f24 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .widget-header h3 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .widget-header p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message.assistant {
+            text-align: left;
+        }
+
+        .message-bubble {
+            display: inline-block;
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .message.user .message-bubble {
+            background: #722F37;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .message-bubble {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .chat-input-area {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 24px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .chat-input-area input:focus {
+            border-color: #722F37;
+        }
+
+        .chat-input-area button {
+            background: #722F37;
+            color: white;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 16px;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #722F37;
+            border-radius: 50%;
+            margin-right: 4px;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-6px); }
+        }
+
+        .try-prompt {
+            text-align: center;
+            padding: 15px;
+            background: #fff8f8;
+            color: #722F37;
+            font-size: 13px;
+            border-top: 1px solid #f0e0e0;
+        }
+
+        .click-hint {
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 900px) {
+            .demo-container {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+            .widget-section {
+                position: relative;
+                top: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-header">
+        <div>
+            <h1>Meritage Resort & Spa</h1>
+            <p>AI Concierge Demo - See how your guests will interact</p>
+        </div>
+        <div class="demo-badge">LIVE DEMO</div>
+    </div>
+
+    <div class="demo-container">
+        <div class="examples-section">
+            <h2>Common Guest Questions</h2>
+            <p>Click any question to see how the AI concierge responds in real-time</p>
+
+            <div class="example-card" onclick="askQuestion(this, 'What time is check-in and check-out?', 'Check-in begins at 4 PM and check-out is at 11 AM. If you need early check-in or late check-out, just contact our front desk team - we\'ll do our best to accommodate you based on availability. Additional fees may apply for these requests.')">
+                <div class="example-question">What time is check-in and check-out?</div>
+                <div class="example-answer">Check-in begins at 4 PM and check-out is at 11 AM. Early/late options available upon request.</div>
+            </div>
+
+            <div class="example-card" onclick="askQuestion(this, 'Tell me about Spa Terra', 'Spa Terra is truly one-of-a-kind! It\'s a 22,000 square foot luxury spa located entirely underground in our estate wine cave. Imagine being surrounded by natural stone and the soft sound of copper water features as you enjoy treatments like hot stone massages, espresso facials, or lavender body scrubs.\n\nBetween treatments, you can unwind in our relaxation lounge, soak in the whirlpool baths, or enjoy the steam grottos. It\'s consistently rated one of California\'s premier spas. Would you like me to help you book a treatment?')">
+                <div class="example-question">Tell me about Spa Terra</div>
+                <div class="example-answer">A 22,000 sq ft luxury spa located underground in our estate wine cave with massages, facials, whirlpools & steam rooms.</div>
+            </div>
+
+            <div class="example-card" onclick="askQuestion(this, 'What restaurants do you have?', 'We have over a dozen dining options right here on property!\n\n**Fine Dining:**\n- Ember Steak - Premium steakhouse\n- Sora Napa - Elevated cuisine\n\n**Casual Dining:**\n- Olive & Hay - Farm-fresh Italian\n- Blend Café - Quick bites & coffee\n- Fivetown Grocery - Gourmet market\n\n**Fun & Entertainment:**\n- Crush Lounge - Bowling, cocktails & sports\n\n**Wine Tasting:**\n- The Village at Meritage has several tasting rooms plus an on-site brewery!\n\nWould you like recommendations based on what you\'re in the mood for?')">
+                <div class="example-question">What restaurants do you have?</div>
+                <div class="example-answer">Over a dozen options including Olive & Hay, Ember Steak, Sora Napa, plus a bowling alley and on-site tasting rooms.</div>
+            </div>
+
+            <div class="example-card" onclick="askQuestion(this, 'Can I bring my dog?', 'Absolutely! We love welcoming furry guests. Here are the details:\n\n- Up to 2 dogs allowed per room\n- Dogs must be under 80 lbs each\n- One-time $100 pet fee includes:\n  • Plush Meritage dog bed (for your stay)\n  • Dog bowl to take home\n  • Pet amenity bag with treats & potty bags\n\nJust one note - please don\'t leave your pup unattended in the room. Need any pet-friendly activity recommendations in the area?')">
+                <div class="example-question">Can I bring my dog?</div>
+                <div class="example-answer">Yes! Up to 2 dogs under 80 lbs per room. $100 fee includes dog bed, bowl to take home, and treat bag.</div>
+            </div>
+
+            <div class="example-card" onclick="askQuestion(this, 'Do you have a pool?', 'Yes, we have TWO beautiful pools!\n\n- **Family-Friendly Pool** - Great for kids and families\n- **Adult-Only Pool** - A peaceful retreat for grown-ups\n\nBoth pools are heated to a comfortable 80°F year-round and feature stunning vineyard views. There\'s also a hot tub!\n\nPool access is included with your resort fee, so just grab your towel and enjoy.')">
+                <div class="example-question">Do you have a pool?</div>
+                <div class="example-answer">Two heated pools (80°F year-round) - one family-friendly, one adult-only - both with vineyard views. Plus a hot tub!</div>
+            </div>
+
+            <div class="example-card" onclick="askQuestion(this, 'What\'s included in the resort fee?', 'Your resort fee includes quite a bit! Here\'s what you get:\n\n🍷 Bottle of wine upon arrival (21+, or non-alcoholic option)\n🚐 Shuttle service to/from downtown Napa\n💧 Two bottles of water daily in your room\n📶 Unlimited high-speed WiFi\n☕ In-room coffee & tea\n🏋️ 24/7 fitness center & yoga studio access\n🧘 Alo Moves on-demand fitness classes\n🏊 Access to both pools & hot tub\n📞 Unlimited local & toll-free calls\n\nIt\'s designed so you have everything you need for a relaxing stay!')">
+                <div class="example-question">What's included in the resort fee?</div>
+                <div class="example-answer">Wine on arrival, downtown shuttle, daily water, WiFi, fitness center, yoga studio, pool access, and more!</div>
+            </div>
+
+            <div class="example-card" onclick="askQuestion(this, 'Is the resort family-friendly?', 'Absolutely! Families are very welcome at the Meritage.\n\n**For Families:**\n- Family-friendly pool with vineyard views\n- Cribs available upon request (no charge)\n- Plenty of kid-friendly dining options\n- The minimum check-in age is 18\n\nThe complimentary wine is for guests 21+, but we\'re happy to provide a non-alcoholic substitute.\n\nWould you like suggestions for family activities in Napa Valley?')">
+                <div class="example-question">Is the resort family-friendly?</div>
+                <div class="example-answer">Yes! Family pool, cribs available, kid-friendly dining. Wine welcome gift is 21+ but alternatives available.</div>
+            </div>
+
+            <div class="example-card" onclick="askQuestion(this, 'How do I get to wineries from the resort?', 'Great question! You have several options:\n\n**Free Option:**\n🚐 Complimentary shuttle to downtown Napa (included in resort fee)\n\n**Wine Tasting On-Site:**\n🍷 The Village at Meritage has multiple tasting rooms - you don\'t even need to leave!\n\n**For Winery Tours:**\n- Book a guided wine tour (we can help arrange)\n- Uber/Lyft are readily available\n- Rent a car for flexibility\n\n**If You\'re Flying Private:**\n✈️ Napa County Airport is just 4 miles away\n\nWould you like winery recommendations or help booking a tour?')">
+                <div class="example-question">How do I get to wineries?</div>
+                <div class="example-answer">Free shuttle to downtown Napa, on-site tasting rooms at The Village, or we can help arrange winery tours.</div>
+            </div>
+
+            <div class="example-card" onclick="askQuestion(this, 'What\'s your cancellation policy?', 'Our standard cancellation policy requires cancellation at least 72 hours before your arrival date to avoid charges.\n\nIf you cancel within 72 hours, a one-night room and tax charge will apply.\n\n**Note:** Some special rates or packages may have different cancellation terms, so always check your specific reservation confirmation.\n\nNeed help with anything else regarding your booking?')">
+                <div class="example-question">What's your cancellation policy?</div>
+                <div class="example-answer">Cancel 72+ hours before arrival to avoid charges. Some special rates may have different terms.</div>
+            </div>
+
+            <div class="example-card" onclick="askQuestion(this, 'Can I do wine tasting at the resort?', 'Yes! You don\'t even need to leave the property.\n\n**The Village at Meritage** features:\n- Several wine tasting rooms with local Napa wines\n- An on-site craft brewery\n- Fivetown Grocery for wine purchases\n- The Food and Wine Center with cooking classes\n\nIt\'s perfect for a relaxing afternoon without worrying about transportation. Many guests love starting here before venturing out to other Napa wineries.\n\nWould you like recommendations for specific tastings?')">
+                <div class="example-question">Can I do wine tasting at the resort?</div>
+                <div class="example-answer">Yes! The Village at Meritage has multiple tasting rooms and an on-site brewery right on the property.</div>
+            </div>
+
+            <p class="click-hint">Click any question above to see the AI response in the chat widget</p>
+        </div>
+
+        <div class="widget-section">
+            <div class="widget-container">
+                <div class="widget-header">
+                    <h3>Meritage Concierge</h3>
+                    <p>Your personal resort guide</p>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message assistant">
+                        <div class="message-bubble">Welcome to the Meritage Resort & Spa! I'm your personal concierge. How can I help make your stay exceptional?</div>
+                    </div>
+                </div>
+                <div class="try-prompt">
+                    Try clicking a question on the left, or type your own below!
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="userInput" placeholder="Ask me anything..." onkeypress="handleKeyPress(event)">
+                    <button onclick="sendCustomMessage()">→</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function askQuestion(card, question, answer) {
+            // Highlight active card
+            document.querySelectorAll('.example-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+
+            // Add user message
+            addMessage(question, 'user');
+
+            // Show typing indicator
+            showTyping();
+
+            // Add assistant response after delay
+            setTimeout(() => {
+                hideTyping();
+                addMessage(answer, 'assistant');
+            }, 1000 + Math.random() * 500);
+        }
+
+        function addMessage(text, type) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+
+            // Convert markdown-style formatting
+            let formattedText = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+
+            messageDiv.innerHTML = `<div class="message-bubble">${formattedText}</div>`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function showTyping() {
+            const messagesDiv = document.getElementById('chatMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message assistant';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="typing-indicator" style="display: inline-block;">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            messagesDiv.appendChild(typingDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function hideTyping() {
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.remove();
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') {
+                sendCustomMessage();
+            }
+        }
+
+        function sendCustomMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            input.value = '';
+
+            showTyping();
+
+            // Generic response for custom messages
+            setTimeout(() => {
+                hideTyping();
+                addMessage("Thanks for your question! In the live version, I'd provide a detailed answer using my knowledge of the Meritage Resort. This demo shows pre-loaded examples - click any question on the left to see real responses!", 'assistant');
+            }, 1200);
+        }
+    </script>
+</body>
+</html>
