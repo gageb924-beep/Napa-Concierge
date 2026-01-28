@@ -572,16 +572,24 @@ async def delete_business(
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
 
-    # Delete related data first
-    db.query(Analytics).filter(Analytics.business_id == business_id).delete()
-    db.query(Lead).filter(Lead.business_id == business_id).delete()
-    db.query(Conversation).filter(Conversation.business_id == business_id).delete()
+    business_name = business.name
 
-    # Delete the business
-    db.delete(business)
-    db.commit()
+    try:
+        # Delete in correct order due to foreign key constraints
+        # 1. Leads first (references conversations)
+        db.query(Lead).filter(Lead.business_id == business_id).delete(synchronize_session=False)
+        # 2. Conversations
+        db.query(Conversation).filter(Conversation.business_id == business_id).delete(synchronize_session=False)
+        # 3. Analytics
+        db.query(Analytics).filter(Analytics.business_id == business_id).delete(synchronize_session=False)
+        # 4. Business
+        db.delete(business)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete: {str(e)}")
 
-    return {"status": "success", "message": f"Business '{business.name}' deleted"}
+    return {"status": "success", "message": f"Business '{business_name}' deleted"}
 
 @app.get("/admin/businesses/{business_id}/analytics")
 async def get_business_analytics(
