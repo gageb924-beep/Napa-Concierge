@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Napa Concierge - Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -470,6 +471,135 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            margin-bottom: 20px;
+        }
+
+        .period-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .period-btn {
+            padding: 8px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .period-btn:hover {
+            border-color: #722F37;
+        }
+
+        .period-btn.active {
+            background: #722F37;
+            color: white;
+            border-color: #722F37;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .analytics-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .analytics-stat {
+            text-align: center;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .analytics-stat .label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .analytics-stat .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .analytics-stat .change {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .analytics-stat .change.positive {
+            color: #28a745;
+        }
+
+        .analytics-stat .change.negative {
+            color: #dc3545;
+        }
+
+        .btn-report {
+            background: #17a2b8;
+        }
+
+        .btn-report:hover {
+            background: #138496;
+        }
+
+        .report-options {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .report-option {
+            flex: 1;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .report-option:hover {
+            border-color: #722F37;
+        }
+
+        .report-option.selected {
+            border-color: #722F37;
+            background: #f9f5f5;
+        }
+
+        .report-option h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+
+        .report-option p {
+            margin: 0;
+            font-size: 13px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -600,7 +730,7 @@
             <div id="page-business-detail" class="page hidden">
                 <div class="page-header">
                     <h1 id="businessDetailName">Business Name</h1>
-                    <div style="display: flex; align-items: center; gap: 20px;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
                         <div class="toggle-container">
                             <span class="toggle-label">Active</span>
                             <label class="toggle-switch">
@@ -608,7 +738,8 @@
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
-                        <button class="btn btn-secondary" onclick="showPage('businesses')">Back to List</button>
+                        <button class="btn btn-report btn-small" onclick="openSendReportModal()">Send Report</button>
+                        <button class="btn btn-secondary btn-small" onclick="showPage('businesses')">Back to List</button>
                     </div>
                 </div>
 
@@ -624,6 +755,43 @@
                     <div class="stat-card">
                         <h4>Leads Captured</h4>
                         <div class="value" id="statLeads">-</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Analytics</h3>
+                    <div class="period-selector">
+                        <button class="period-btn active" data-days="7" onclick="changePeriod(7)">7 Days</button>
+                        <button class="period-btn" data-days="30" onclick="changePeriod(30)">30 Days</button>
+                        <button class="period-btn" data-days="90" onclick="changePeriod(90)">90 Days</button>
+                    </div>
+                    <div class="charts-grid">
+                        <div>
+                            <h4 style="font-size: 14px; color: #666; margin-bottom: 10px;">Conversations Over Time</h4>
+                            <div class="chart-container">
+                                <canvas id="conversationsChart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style="font-size: 14px; color: #666; margin-bottom: 10px;">Messages Per Day</h4>
+                            <div class="chart-container">
+                                <canvas id="messagesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="analytics-stats">
+                        <div class="analytics-stat">
+                            <div class="label">Avg Conversations/Day</div>
+                            <div class="value" id="avgConversations">-</div>
+                        </div>
+                        <div class="analytics-stat">
+                            <div class="label">Peak Day</div>
+                            <div class="value" id="peakDay">-</div>
+                        </div>
+                        <div class="analytics-stat">
+                            <div class="label">Lead Conversion Rate</div>
+                            <div class="value" id="conversionRate">-</div>
+                        </div>
                     </div>
                 </div>
 
@@ -684,12 +852,48 @@
         </div>
     </div>
 
+    <!-- Send Report Modal -->
+    <div class="modal" id="sendReportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Send Report</h3>
+                <button class="close-btn" onclick="closeSendReportModal()">&times;</button>
+            </div>
+            <p style="margin-bottom: 15px; color: #666;">Send a performance report to <strong id="reportRecipient"></strong></p>
+
+            <div class="report-options">
+                <div class="report-option selected" data-period="weekly" onclick="selectReportPeriod('weekly')">
+                    <h4>Weekly Report</h4>
+                    <p>Last 7 days of activity</p>
+                </div>
+                <div class="report-option" data-period="monthly" onclick="selectReportPeriod('monthly')">
+                    <h4>Monthly Report</h4>
+                    <p>Last 30 days with comparisons</p>
+                </div>
+            </div>
+
+            <div id="reportPreview" style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="font-size: 14px; color: #666; margin: 0;">Loading preview...</p>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" style="flex: 1;" onclick="closeSendReportModal()">Cancel</button>
+                <button class="btn btn-success" style="flex: 1;" id="sendReportBtn" onclick="sendReport()">Send Report</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_URL = 'https://napa-backend-production.up.railway.app';
         const WIDGET_URL = 'https://napa-frontend-production.up.railway.app/widget.js';
         let adminKey = '';
         let businesses = [];
         let currentBusiness = null;
+        let conversationsChart = null;
+        let messagesChart = null;
+        let currentPeriod = 7;
+        let selectedReportPeriod = 'weekly';
+        let currentAnalyticsData = null;
 
         function login() {
             adminKey = document.getElementById('adminKey').value;
@@ -784,16 +988,21 @@
                 const embedCode = `<script src="${WIDGET_URL}" data-api-key="${business.api_key}" data-api-url="${API_URL}"><\/script>`;
                 document.getElementById('embedCode').textContent = embedCode;
 
-                // Load analytics
-                fetch(`${API_URL}/admin/businesses/${id}/analytics`, {
-                    headers: { 'x-admin-key': adminKey }
-                })
-                .then(res => res.json())
-                .then(analytics => {
-                    document.getElementById('statConversations').textContent = analytics.total_conversations || 0;
-                    document.getElementById('statMessages').textContent = analytics.total_messages || 0;
-                    document.getElementById('statLeads').textContent = analytics.total_leads || 0;
+                showPage('business-detail');
+
+                // Initialize charts if not already done
+                if (!conversationsChart) {
+                    initCharts();
+                }
+
+                // Reset period selector to 7 days
+                currentPeriod = 7;
+                document.querySelectorAll('.period-btn').forEach(btn => {
+                    btn.classList.toggle('active', parseInt(btn.dataset.days) === 7);
                 });
+
+                // Load analytics with charts
+                loadAnalytics(id, currentPeriod);
 
                 // Load leads
                 fetch(`${API_URL}/admin/businesses/${id}/leads`, {
@@ -816,8 +1025,6 @@
                         </tr>
                     `).join('');
                 });
-
-                showPage('business-detail');
             });
         }
 
@@ -907,6 +1114,232 @@
         document.getElementById('adminKey').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') login();
         });
+
+        // Chart functions
+        function initCharts() {
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            };
+
+            const convCtx = document.getElementById('conversationsChart').getContext('2d');
+            conversationsChart = new Chart(convCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Conversations',
+                        data: [],
+                        borderColor: '#722F37',
+                        backgroundColor: 'rgba(114, 47, 55, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: chartOptions
+            });
+
+            const msgCtx = document.getElementById('messagesChart').getContext('2d');
+            messagesChart = new Chart(msgCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Messages',
+                        data: [],
+                        backgroundColor: '#2c5282',
+                        borderRadius: 4
+                    }]
+                },
+                options: chartOptions
+            });
+        }
+
+        function updateCharts(data) {
+            currentAnalyticsData = data;
+
+            // Sort by date ascending
+            const dailyData = [...data.daily].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const labels = dailyData.map(d => {
+                const date = new Date(d.date);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            });
+            const conversations = dailyData.map(d => d.conversations);
+            const messages = dailyData.map(d => d.messages);
+
+            conversationsChart.data.labels = labels;
+            conversationsChart.data.datasets[0].data = conversations;
+            conversationsChart.update();
+
+            messagesChart.data.labels = labels;
+            messagesChart.data.datasets[0].data = messages;
+            messagesChart.update();
+
+            // Update analytics stats
+            const totalConversations = conversations.reduce((a, b) => a + b, 0);
+            const totalMessages = messages.reduce((a, b) => a + b, 0);
+            const totalLeads = dailyData.reduce((a, d) => a + d.leads, 0);
+            const daysWithData = dailyData.filter(d => d.conversations > 0).length || 1;
+
+            const avgConv = (totalConversations / daysWithData).toFixed(1);
+            document.getElementById('avgConversations').textContent = avgConv;
+
+            // Find peak day
+            if (dailyData.length > 0) {
+                const peakDayData = dailyData.reduce((max, d) => d.conversations > max.conversations ? d : max, dailyData[0]);
+                const peakDate = new Date(peakDayData.date);
+                document.getElementById('peakDay').textContent = peakDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            } else {
+                document.getElementById('peakDay').textContent = '-';
+            }
+
+            // Conversion rate
+            const conversionRate = totalConversations > 0
+                ? ((totalLeads / totalConversations) * 100).toFixed(1) + '%'
+                : '0%';
+            document.getElementById('conversionRate').textContent = conversionRate;
+        }
+
+        function loadAnalytics(businessId, days) {
+            fetch(`${API_URL}/admin/businesses/${businessId}/analytics?days=${days}`, {
+                headers: { 'x-admin-key': adminKey }
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Update top stats
+                document.getElementById('statConversations').textContent = data.totals.conversations;
+                document.getElementById('statMessages').textContent = data.totals.messages;
+                document.getElementById('statLeads').textContent = data.totals.leads_captured;
+
+                // Update charts
+                updateCharts(data);
+            });
+        }
+
+        function changePeriod(days) {
+            currentPeriod = days;
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.classList.toggle('active', parseInt(btn.dataset.days) === days);
+            });
+
+            if (currentBusiness) {
+                loadAnalytics(currentBusiness.id, days);
+            }
+        }
+
+        // Send Report Modal functions
+        function openSendReportModal() {
+            if (!currentBusiness) return;
+
+            if (!currentBusiness.contact_email) {
+                alert('This business has no contact email configured. Please add one first.');
+                return;
+            }
+
+            document.getElementById('reportRecipient').textContent = currentBusiness.contact_email;
+            document.getElementById('sendReportModal').style.display = 'flex';
+            selectedReportPeriod = 'weekly';
+            selectReportPeriod('weekly');
+        }
+
+        function closeSendReportModal() {
+            document.getElementById('sendReportModal').style.display = 'none';
+        }
+
+        function selectReportPeriod(period) {
+            selectedReportPeriod = period;
+            document.querySelectorAll('.report-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.period === period);
+            });
+
+            // Load preview
+            const endpoint = period === 'monthly' ? 'monthly-report' : 'weekly-report';
+            document.getElementById('reportPreview').innerHTML = '<p style="font-size: 14px; color: #666; margin: 0;">Loading preview...</p>';
+
+            fetch(`${API_URL}/admin/businesses/${currentBusiness.id}/${endpoint}`, {
+                headers: { 'x-admin-key': adminKey }
+            })
+            .then(res => res.json())
+            .then(data => {
+                const prevPeriod = data.previous_period || {};
+                const prevConv = prevPeriod.conversations || 0;
+                const convChange = prevConv > 0
+                    ? ((data.stats.conversations - prevConv) / prevConv * 100).toFixed(0)
+                    : data.stats.conversations > 0 ? 100 : 0;
+                const changeLabel = convChange >= 0 ? `+${convChange}%` : `${convChange}%`;
+                const changeColor = convChange >= 0 ? '#28a745' : '#dc3545';
+
+                document.getElementById('reportPreview').innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; color: #722F37;">${data.stats.conversations}</div>
+                            <div style="font-size: 12px; color: #666;">Conversations</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; color: #2c5282;">${data.stats.messages}</div>
+                            <div style="font-size: 12px; color: #666;">Messages</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; color: #276749;">${data.stats.leads_captured}</div>
+                            <div style="font-size: 12px; color: #666;">Leads</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; color: ${changeColor};">${changeLabel}</div>
+                            <div style="font-size: 12px; color: #666;">vs Previous</div>
+                        </div>
+                    </div>
+                `;
+            })
+            .catch(err => {
+                document.getElementById('reportPreview').innerHTML = '<p style="font-size: 14px; color: #dc3545; margin: 0;">Failed to load preview</p>';
+            });
+        }
+
+        function sendReport() {
+            if (!currentBusiness) return;
+
+            const btn = document.getElementById('sendReportBtn');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            fetch(`${API_URL}/admin/businesses/${currentBusiness.id}/send-report`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-admin-key': adminKey
+                },
+                body: JSON.stringify({ period: selectedReportPeriod })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to send report');
+                return res.json();
+            })
+            .then(data => {
+                alert(`Report sent successfully to ${currentBusiness.contact_email}!`);
+                closeSendReportModal();
+            })
+            .catch(err => {
+                alert('Failed to send report. Please try again.');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = 'Send Report';
+            });
+        }
     </script>
 </body>
 </html>

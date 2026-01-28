@@ -770,6 +770,274 @@ async def get_weekly_report(
     }
 
 
+@app.get("/admin/businesses/{business_id}/monthly-report")
+async def get_monthly_report(
+    business_id: int,
+    x_admin_key: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Get monthly report data for a business (admin only)"""
+    verify_admin_key(x_admin_key)
+
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    from datetime import timedelta
+    start_date = date.today() - timedelta(days=30)
+    prev_start_date = date.today() - timedelta(days=60)
+    prev_end_date = date.today() - timedelta(days=30)
+
+    # Current period analytics
+    analytics = db.query(Analytics).filter(
+        Analytics.business_id == business_id,
+        Analytics.date >= start_date
+    ).all()
+
+    # Previous period analytics for comparison
+    prev_analytics = db.query(Analytics).filter(
+        Analytics.business_id == business_id,
+        Analytics.date >= prev_start_date,
+        Analytics.date < prev_end_date
+    ).all()
+
+    total_conversations = sum(a.total_conversations for a in analytics)
+    total_messages = sum(a.total_messages for a in analytics)
+    total_leads = sum(a.leads_captured for a in analytics)
+
+    prev_conversations = sum(a.total_conversations for a in prev_analytics)
+    prev_messages = sum(a.total_messages for a in prev_analytics)
+    prev_leads = sum(a.leads_captured for a in prev_analytics)
+
+    new_leads = db.query(Lead).filter(
+        Lead.business_id == business_id,
+        Lead.created_at >= datetime.combine(start_date, datetime.min.time())
+    ).all()
+
+    return {
+        "business_name": business.name,
+        "period": "Last 30 days",
+        "stats": {
+            "conversations": total_conversations,
+            "messages": total_messages,
+            "leads_captured": total_leads
+        },
+        "previous_period": {
+            "conversations": prev_conversations,
+            "messages": prev_messages,
+            "leads_captured": prev_leads
+        },
+        "new_leads": [
+            {
+                "name": l.name,
+                "email": l.email,
+                "phone": l.phone,
+                "interest": l.interest,
+                "created_at": l.created_at
+            }
+            for l in new_leads
+        ]
+    }
+
+
+class SendReportRequest(BaseModel):
+    period: str = "weekly"  # "weekly" or "monthly"
+
+
+@app.post("/admin/businesses/{business_id}/send-report")
+async def send_business_report(
+    business_id: int,
+    request_data: SendReportRequest,
+    x_admin_key: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Send a report to a specific business on-demand (admin only)"""
+    verify_admin_key(x_admin_key)
+
+    resend_api_key = os.getenv("RESEND_API_KEY")
+    if not resend_api_key:
+        raise HTTPException(status_code=400, detail="RESEND_API_KEY not configured")
+
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    if not business.contact_email:
+        raise HTTPException(status_code=400, detail="Business has no contact email configured")
+
+    import resend
+    resend.api_key = resend_api_key
+
+    from datetime import timedelta
+
+    # Determine period
+    if request_data.period == "monthly":
+        days = 30
+        period_label = "Monthly"
+        start_date = date.today() - timedelta(days=30)
+        prev_start_date = date.today() - timedelta(days=60)
+        prev_end_date = date.today() - timedelta(days=30)
+    else:
+        days = 7
+        period_label = "Weekly"
+        start_date = date.today() - timedelta(days=7)
+        prev_start_date = date.today() - timedelta(days=14)
+        prev_end_date = date.today() - timedelta(days=7)
+
+    # Current period analytics
+    analytics = db.query(Analytics).filter(
+        Analytics.business_id == business_id,
+        Analytics.date >= start_date
+    ).order_by(Analytics.date).all()
+
+    # Previous period for comparison
+    prev_analytics = db.query(Analytics).filter(
+        Analytics.business_id == business_id,
+        Analytics.date >= prev_start_date,
+        Analytics.date < prev_end_date
+    ).all()
+
+    total_conversations = sum(a.total_conversations for a in analytics)
+    total_messages = sum(a.total_messages for a in analytics)
+    total_leads = sum(a.leads_captured for a in analytics)
+
+    prev_conversations = sum(a.total_conversations for a in prev_analytics)
+    prev_messages = sum(a.total_messages for a in prev_analytics)
+    prev_leads = sum(a.leads_captured for a in prev_analytics)
+
+    # Calculate changes
+    def calc_change(current, previous):
+        if previous == 0:
+            return "+100%" if current > 0 else "0%"
+        change = ((current - previous) / previous) * 100
+        return f"+{change:.0f}%" if change >= 0 else f"{change:.0f}%"
+
+    conv_change = calc_change(total_conversations, prev_conversations)
+    msg_change = calc_change(total_messages, prev_messages)
+    lead_change = calc_change(total_leads, prev_leads)
+
+    # Get new leads
+    new_leads = db.query(Lead).filter(
+        Lead.business_id == business_id,
+        Lead.created_at >= datetime.combine(start_date, datetime.min.time())
+    ).all()
+
+    # Build daily breakdown
+    daily_rows = ""
+    for a in analytics:
+        daily_rows += f"""
+        <tr>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">{a.date.strftime('%b %d')}</td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #eee; text-align: center;">{a.total_conversations}</td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #eee; text-align: center;">{a.total_messages}</td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #eee; text-align: center;">{a.leads_captured}</td>
+        </tr>
+        """
+
+    # Build leads HTML
+    leads_html = ""
+    if new_leads:
+        leads_html = """
+        <div style="margin-top: 30px;">
+            <h3 style="color: #333; margin-bottom: 15px;">New Leads</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f5f5f5;">
+                        <th style="padding: 10px; text-align: left;">Name</th>
+                        <th style="padding: 10px; text-align: left;">Contact</th>
+                        <th style="padding: 10px; text-align: left;">Interest</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        for lead in new_leads:
+            contact = lead.email or lead.phone or "N/A"
+            leads_html += f"""
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">{lead.name or 'Unknown'}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">{contact}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">{lead.interest or '-'}</td>
+                </tr>
+            """
+        leads_html += "</tbody></table></div>"
+
+    html_content = f"""
+    <html>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 700px; margin: 0 auto; background: #f5f5f5;">
+        <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #722F37; margin: 0;">{period_label} Concierge Report</h1>
+                <p style="color: #666; margin-top: 5px;">{business.name}</p>
+            </div>
+
+            <div style="display: flex; gap: 15px; margin-bottom: 30px;">
+                <div style="flex: 1; background: linear-gradient(135deg, #722F37 0%, #4a1f24 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 32px; font-weight: 700;">{total_conversations}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Conversations</div>
+                    <div style="font-size: 12px; margin-top: 5px; opacity: 0.8;">{conv_change} vs prev</div>
+                </div>
+                <div style="flex: 1; background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 32px; font-weight: 700;">{total_messages}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Messages</div>
+                    <div style="font-size: 12px; margin-top: 5px; opacity: 0.8;">{msg_change} vs prev</div>
+                </div>
+                <div style="flex: 1; background: linear-gradient(135deg, #276749 0%, #1a4731 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 32px; font-weight: 700;">{total_leads}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Leads</div>
+                    <div style="font-size: 12px; margin-top: 5px; opacity: 0.8;">{lead_change} vs prev</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h3 style="color: #333; margin-bottom: 15px;">Daily Breakdown</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <thead>
+                        <tr style="background: #f5f5f5;">
+                            <th style="padding: 10px 12px; text-align: left;">Date</th>
+                            <th style="padding: 10px 12px; text-align: center;">Conversations</th>
+                            <th style="padding: 10px 12px; text-align: center;">Messages</th>
+                            <th style="padding: 10px 12px; text-align: center;">Leads</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {daily_rows}
+                    </tbody>
+                </table>
+            </div>
+
+            {leads_html}
+
+            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
+                <p style="color: #666; font-size: 14px; margin: 0;">
+                    Your AI concierge is working 24/7 for you!<br>
+                    <span style="color: #722F37; font-weight: 600;">- Napa Concierge Team</span>
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+    try:
+        resend.Emails.send({
+            "from": "Napa Concierge <onboarding@resend.dev>",
+            "to": [business.contact_email],
+            "subject": f"{period_label} Report: {total_conversations} conversations, {total_leads} new leads - {business.name}",
+            "html": html_content
+        })
+        return {
+            "status": "success",
+            "message": f"{period_label} report sent to {business.contact_email}",
+            "stats": {
+                "conversations": total_conversations,
+                "messages": total_messages,
+                "leads": total_leads
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
+
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
