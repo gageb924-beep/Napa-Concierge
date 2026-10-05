@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Missed Call AI</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --ink:#1b1f24; --muted:#6b7280; --line:#e5e7eb; --brand:#0f6fde; --hot:#d93025; --ok:#188038; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:#0b1b33; color:#fff; padding:14px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0 auto 0 0; }
+  input, select, textarea, button { font:inherit; }
+  input, select, textarea { padding:8px 10px; border:1px solid var(--line); border-radius:8px; width:100%; }
+  header input, header select { width:auto; min-width:180px; }
+  button { padding:8px 14px; border:0; border-radius:8px; background:var(--brand); color:#fff; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--brand); border:1px solid var(--brand); }
+  main { max-width:1150px; margin:0 auto; padding:16px; display:grid; gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .card h2 { margin:0 0 12px; font-size:16px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .stat b { display:block; font-size:26px; }
+  .stat span { color:var(--muted); font-size:13px; }
+  .stat.money b { color:var(--ok); }
+  .grid2 { display:grid; grid-template-columns:1fr 360px; gap:16px; }
+  @media (max-width:900px) { .grid2 { grid-template-columns:1fr; } }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; }
+  .tag { display:inline-block; padding:2px 8px; border-radius:99px; font-size:12px; background:#eef2ff; }
+  .tag.emergency { background:#fde8e7; color:var(--hot); font-weight:600; }
+  .scroll { overflow-x:auto; }
+  .phone { border:10px solid #111; border-radius:28px; height:520px; display:flex; flex-direction:column; background:#fff; overflow:hidden; }
+  .phone .top { background:#f2f2f7; padding:10px; text-align:center; font-size:13px; color:var(--muted); }
+  .thread { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:6px; }
+  .bubble { max-width:80%; padding:8px 12px; border-radius:16px; font-size:14px; white-space:pre-wrap; }
+  .bubble.them { background:#e9e9eb; align-self:flex-start; }
+  .bubble.me { background:var(--brand); color:#fff; align-self:flex-end; }
+  .bubble.sys { align-self:center; background:none; color:var(--muted); font-size:12px; }
+  .compose { display:flex; gap:6px; padding:8px; border-top:1px solid var(--line); }
+  .muted { color:var(--muted); font-size:13px; }
+  form.biz { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+  form.biz textarea { grid-column:1/-1; min-height:80px; }
+  .convo { border-bottom:1px solid var(--line); padding:8px 0; }
+  .convo summary { cursor:pointer; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📞 Missed Call AI</h1>
+  <input id="key" type="password" placeholder="Admin key">
+  <select id="biz"></select>
+  <button id="connect">Load</button>
+</header>
+
+<main>
+  <p id="msg" class="muted">Enter your admin key to load your businesses.</p>
+
+  <section id="app" class="hidden" style="display:grid; gap:16px">
+    <div class="stats" id="stats"></div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Jobs captured</h2>
+        <div class="scroll"><table id="jobs"></table></div>
+      </div>
+
+      <div class="card">
+        <h2>Live demo</h2>
+        <p class="muted">Simulate a missed call, then text as the customer. Real AI, no phone needed.</p>
+        <div class="phone">
+          <div class="top" id="phoneTop">Customer's phone</div>
+          <div class="thread" id="thread"></div>
+          <div class="compose">
+            <input id="demoText" placeholder="Text message">
+            <button id="demoSend">Send</button>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:10px">
+          <button id="demoCall" class="ghost" style="flex:1">Simulate missed call</button>
+          <button id="demoReset" class="ghost">New customer</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Conversations</h2>
+      <div id="convos"></div>
+    </div>
+  </section>
+
+  <div class="card">
+    <h2>Add a business</h2>
+    <form class="biz" id="bizForm">
+      <input name="name" placeholder="Business name" required>
+      <select name="trade">
+        <option value="hvac">HVAC</option><option value="plumbing">Plumbing</option>
+        <option value="roofing">Roofing</option><option value="electrical">Electrical</option>
+        <option value="pest control">Pest control</option><option value="solar">Solar</option>
+        <option value="garage door">Garage door</option><option value="landscaping">Landscaping</option>
+      </select>
+      <input name="twilio_number" placeholder="Twilio number (+1916...)" required>
+      <input name="owner_phone" placeholder="Owner cell (+1916...)" required>
+      <input name="owner_email" placeholder="Owner email">
+      <input name="avg_job_value" type="number" placeholder="Avg job value ($)" value="450">
+      <input name="service_area" placeholder="Service area (cities)">
+      <input name="business_hours" placeholder="Hours">
+      <textarea name="custom_knowledge" placeholder="Services, price ranges, promos, warranty info. e.g. Diagnostic visit $89, waived with repair. Free estimates on new systems. We don't service commercial rooftop units."></textarea>
+      <button>Create business</button>
+    </form>
+  </div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const state = { key: '', biz: null, demoPhone: randPhone() };
+try { state.key = localStorage.getItem('mcai_key') || ''; } catch (e) {}
+$('#key').value = state.key;
+
+function randPhone() { return '+1916555' + String(Math.floor(1000 + Math.random() * 9000)); }
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function money(n) { return '$' + Number(n || 0).toLocaleString(); }
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Admin-Key': state.key, ...(opts.headers || {}) } });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+
+async function loadBusinesses() {
+  state.key = $('#key').value.trim();
+  try { localStorage.setItem('mcai_key', state.key); } catch (e) {}
+  try {
+    const list = await api('/admin/businesses');
+    $('#biz').innerHTML = list.map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
+    if (!list.length) { $('#msg').textContent = 'No businesses yet. Add one below.'; $('#app').classList.add('hidden'); return; }
+    state.biz = Number($('#biz').value);
+    $('#msg').textContent = '';
+    $('#app').classList.remove('hidden');
+    refresh();
+  } catch (e) { $('#msg').textContent = 'Error: ' + e.message; }
+}
+
+async function refresh() {
+  const id = state.biz;
+  const [s, jobs, convos] = await Promise.all([
+    api(`/admin/businesses/${id}/stats`), api(`/admin/businesses/${id}/jobs`), api(`/admin/businesses/${id}/conversations`)
+  ]);
+  $('#stats').innerHTML = [
+    ['Calls (30d)', s.total_calls], ['Missed calls', s.missed_calls], ['Customers who replied', s.customers_replied],
+    ['Jobs captured', s.jobs_captured], ['Emergencies', s.emergencies]
+  ].map(([l, v]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('') +
+    `<div class="stat money"><b>${money(s.estimated_revenue_saved)}</b><span>Est. revenue saved</span></div>`;
+
+  $('#jobs').innerHTML = '<tr><th>When</th><th>Customer</th><th>Issue</th><th>Urgency</th><th>Status</th></tr>' +
+    (jobs.length ? jobs.map(j => `<tr>
+      <td>${new Date(j.created_at + 'Z').toLocaleString()}</td>
+      <td>${esc(j.customer_name)}<br><span class="muted">${esc(j.customer_phone)}<br>${esc(j.address)}</span></td>
+      <td>${esc(j.issue)}<br><span class="muted">${esc(j.preferred_time || '')}</span></td>
+      <td><span class="tag ${esc(j.urgency)}">${esc(j.urgency)}</span></td>
+      <td><select data-job="${j.id}">${['new','scheduled','won','lost'].map(o => `<option ${o === j.status ? 'selected' : ''}>${o}</option>`).join('')}</select></td>
+    </tr>`).join('') : '<tr><td colspan="5" class="muted">No jobs yet.</td></tr>');
+
+  $('#convos').innerHTML = convos.length ? convos.map(c => `<details class="convo">
+      <summary>${esc(c.customer_phone)} · <span class="tag">${esc(c.status)}</span> · <span class="muted">${new Date(c.updated_at + 'Z').toLocaleString()}</span></summary>
+      ${c.messages.map(m => `<p><b>${m.role === 'user' ? 'Customer' : 'AI'}:</b> ${esc(m.content)}</p>`).join('')}
+    </details>`).join('') : '<p class="muted">No conversations yet.</p>';
+}
+
+function bubble(cls, text) {
+  const d = document.createElement('div');
+  d.className = 'bubble ' + cls; d.textContent = text;
+  $('#thread').appendChild(d); $('#thread').scrollTop = 1e9;
+}
+
+$('#connect').onclick = loadBusinesses;
+$('#biz').onchange = () => { state.biz = Number($('#biz').value); refresh(); };
+$('#jobs').onchange = async e => {
+  const id = e.target.dataset.job; if (!id) return;
+  await api(`/admin/jobs/${id}`, { method: 'PUT', body: JSON.stringify({ status: e.target.value }) });
+  refresh();
+};
+$('#demoCall').onclick = async () => {
+  bubble('sys', '📞 Missed call from ' + state.demoPhone);
+  const r = await api(`/admin/businesses/${state.biz}/simulate/missed-call`, { method: 'POST', body: JSON.stringify({ customer_phone: state.demoPhone }) });
+  bubble('them', r.sent || '(already texting this customer)');
+  refresh();
+};
+async function demoSend() {
+  const body = $('#demoText').value.trim(); if (!body) return;
+  $('#demoText').value = ''; bubble('me', body); bubble('sys', 'typing…');
+  try {
+    const r = await api(`/admin/businesses/${state.biz}/simulate/sms`, { method: 'POST', body: JSON.stringify({ customer_phone: state.demoPhone, body }) });
+    $('#thread').lastChild.remove();
+    if (r.reply) bubble('them', r.reply);
+  } catch (e) { $('#thread').lastChild.textContent = 'Error: ' + e.message; }
+  refresh();
+}
+$('#demoSend').onclick = demoSend;
+$('#demoText').onkeydown = e => { if (e.key === 'Enter') demoSend(); };
+$('#demoReset').onclick = () => { state.demoPhone = randPhone(); $('#thread').innerHTML = ''; $('#phoneTop').textContent = 'Customer ' + state.demoPhone; };
+
+$('#bizForm').onsubmit = async e => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  Object.keys(data).forEach(k => data[k] === '' && delete data[k]);
+  if (data.avg_job_value) data.avg_job_value = Number(data.avg_job_value);
+  try { await api('/admin/businesses', { method: 'POST', body: JSON.stringify(data) }); e.target.reset(); loadBusinesses(); }
+  catch (err) { alert(err.message); }
+};
+
+$('#phoneTop').textContent = 'Customer ' + state.demoPhone;
+if (state.key) loadBusinesses();
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# Render blueprint: in Render, New > Blueprint and point it at missed-call-ai/render.yaml
+services:
+  - type: web
+    name: missed-call-ai
+    runtime: python
+    rootDir: missed-call-ai
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && python main.py
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ADMIN_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: missed-call-ai-db
+          property: connectionString
+
+databases:
+  - name: missed-call-ai-db
+    plan: free
